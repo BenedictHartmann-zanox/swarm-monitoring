@@ -12,7 +12,7 @@ if $cmd > /dev/null; then
 	ismanager=1
 #	echo "node is a manager"
 else
-	ismanager=0 
+	ismanager=0
 fi
 }
 
@@ -25,31 +25,33 @@ declare -a OKNODE
 declare -a NREADY
 declare -a NACTIVE
 
-docker node ls --format "{{.ID}}" >  $tempfile
+#docker node ls --format "{{.ID}}" >  $tempfile
+docker node ls | sed 1d | awk {'print $1'} > $tempfile
 numberOfNodes=$( wc -l $tempfile | awk {'print $1'} )
 
 while read nodeid; do
-	hostname=`docker node ls --format "{{.ID}} {{.Hostname}}" | grep $nodeid | awk {'print $2'}`
-	ready=0
+	#hostname=`docker node ls --format "{{.ID}} {{.Hostname}}" | grep $nodeid | awk {'print $2'}`
+  hostname=`docker node inspect $nodeid | grep Hostname | cut -d "\"" -f 4`
+  ready=0
 	reachable=0
-	if docker node inspect $nodeid | grep State | grep ready >/dev/null; then 
-		 ready=1 
+	if docker node inspect $nodeid | grep State | grep ready >/dev/null; then
+		 ready=1
 	fi
 	if docker node inspect $nodeid | grep Availability | grep active>/dev/null; then
 		 active=1
 	fi
-	[ $ready -eq 0 ] && NREADY[$i]=$hostname && problemN=1 
+	[ $ready -eq 0 ] && NREADY[$i]=$hostname && problemN=1
 	[ $active -eq 0 ] && NACTIVE[$i]=$hostname && problemN=1
-	[ $ready -eq 1 ] && [ $active -eq 1 ] && OKNODE[$i]=$hostname 
+	[ $ready -eq 1 ] && [ $active -eq 1 ] && OKNODE[$i]=$hostname
 
 	let "i++"
 done < $tempfile
 
-echo ${NREADY[*]} > /tmp/temp_nready.txt 
+echo ${NREADY[*]} > /tmp/temp_nready.txt
 echo ${NACTIVE[*]} > /tmp/temp_nactive.txt
 echo ${OKNODE[*]} > /tmp/temp_ok.txt
 
-rm -f $tempfile 
+rm -f $tempfile
 reviseStatus $problemN $numberOfNodes
 }
 
@@ -68,7 +70,7 @@ if [ $problemN -eq 1 ]; then
 	cat /tmp/temp_nready.txt >> $nstatusfile
 fi
 	echo "Swarm nodes OK: $numberOfOk/$numberOfNodes" >> $nstatusfile
-	cat /tmp/temp_ok.txt >> $nstatusfile
+  cat /tmp/temp_ok.txt >> $nstatusfile
 
 rm -f /tmp/temp_ok.txt
 rm -f /tmp/temp_nactive.txt
@@ -89,38 +91,41 @@ updategrace=3000
 declare -a OKSERVICE
 declare -a BADSERVICE
 
-docker service ls --format "{{.ID}}" > $tempfile
+#docker service ls --format "{{.ID}}" > $tempfile
+docker service ls | sed 1d | awk {'print $1'} > $tempfile
 
 while read serviceid; do
 
-	servicename=`docker service ls -f id=$serviceid --format "{{.Name}}"`
-	replica=`docker service ls --format "{{.Replicas}}"`
-	fullreplica=$(echo $replica | cut -c 3)
-	currreplica=$( echo $replica | cut -c 1 )
-	allowedreplica=$((($fullreplica/2)+1))	
+	#servicename=`docker service ls -f id=$serviceid --format "{{.Name}}"`
+  servicename=`docker service ls | sed 1d | awk {'print $2'}`
+	#replica=`docker service ls --format "{{.Replicas}}"`
+  replica=`docker service ls | sed 1d | awk {'print $4'}`
+	fullreplica=$(echo $replica | cut -d "/" -f 2)
+	currreplica=$( echo $replica | cut -d "/" -f 1)
+	allowedreplica=$((($fullreplica/2)+1))
 
 	if [ $(($curreplica + 1)) -lt $allowedreplica ]; then
-#		echo "replicas are matching $replica" 
-		echo "$servicename - $replica" >> $tempfile_ok 
+#		echo "replicas are matching $replica"
+		echo "$servicename - $replica" >> $tempfile_ok
 	else
 		cmd=$(docker service inspect $serviceid | grep UpdatedAt | cut -d "\"" -f 4 )
 		updatetime=$( date -d $cmd +%s)
 		currenttime=$( date +%s)
 		timediff=$(( $currenttime - $updatetime ))
-		if [ $timediff -gt $updategrace ]; then 
+		if [ $timediff -gt $updategrace ]; then
 			problemS=1
 			echo "Service is broken and has not been updated recently!"
 			echo "$servicename - $replica" >> $tempfile_bad
 		else
 			echo "Service is not at full replica but was recently deployed"
-		fi	
+		fi
 	fi
 
 let "i++"
 done < $tempfile
 
 reviseServices $problemS $tempfile_ok $tempfile_bad
-rm -f $tempfile 
+rm -f $tempfile
 }
 
 reviseServices(){
