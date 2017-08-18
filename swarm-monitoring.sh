@@ -65,12 +65,12 @@ numberOfOk=$(($numberOfNodes - ($numberOfNactive + $numberOfNready)))
 echo "NODE HEALTH TEST:" >> $nstatusfile
 if [ $problemN -eq 1 ]; then
 	echo "Critical:" >> $nstatusfile
-	echo "Swarm nodes INACTIVE: $numberOfNactive/$numberOfNodes" >> $nstatusfile
+	echo "Swarm nodes INACTIVE: ($numberOfNactive/$numberOfNodes)" >> $nstatusfile
 	cat /tmp/temp_nactive.txt >> $nstatusfile
-	echo "Swarm nodes NOT READY: $numberOfNready/$numberOfNodes"  >> $nstatusfile
+	echo "Swarm nodes NOT READY: ($numberOfNready/$numberOfNodes)"  >> $nstatusfile
 	cat /tmp/temp_nready.txt >> $nstatusfile
 fi
-	echo "Swarm nodes OK: $numberOfOk/$numberOfNodes" >> $nstatusfile
+	echo "Swarm nodes OK: ($numberOfOk/$numberOfNodes)" >> $nstatusfile
   cat /tmp/temp_ok.txt >> $nstatusfile
 
 rm -f /tmp/temp_ok.txt
@@ -133,16 +133,17 @@ reviseServices(){
 problemS=$1
 tempfileok=$2
 tempfilebad=$3
+touch $tempfilebad
 statusfile=/tmp/serviceStatus.txt
-#numberOfSok=$( sed '/^\s*$/d' $tempfileok | wc -l | awk {'print $1'} )
-#numberOfSbad=$( sed '/^\s*$/d' $tempfilebad | wc -l | awk {'print $1'} )
-#numberOfS=$(($numberOfSbad + $numberOfSok))
+numberOfSok=$( sed '/^\s*$/d' $tempfileok | wc -l | awk {'print $1'} )
+numberOfSbad=$( sed '/^\s*$/d' $tempfilebad | wc -l | awk {'print $1'} )
+numberOfS=$(($numberOfSbad + $numberOfSok))
 echo "SERVICE HEALTH TEST:" >$statusfile
 if [ $problemS -eq 1 ]; then
-	echo "Critical: The following services have critical replicas!"
+	echo "Critical: The following services have critical replicas: ($numberOfSbad/$numberOfSok)"
 	cat $tempfilebad >> $statusfile
 fi
-echo "Services OK:" >> $statusfile
+echo "Services OK: ($numberOfSok/$numberOfS)" >> $statusfile
 cat $tempfileok >> $statusfile
 
 cat $statusfile
