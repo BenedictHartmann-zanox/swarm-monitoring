@@ -62,6 +62,7 @@ nstatusfile=/tmp/status.txt
 numberOfNactive=$( sed '/^\s*$/d' /tmp/temp_nactive.txt| wc -l | awk {'print $1'} )
 numberOfNready=$( sed '/^\s*$/d' /tmp/temp_nready.txt | wc -l | awk {'print $1'} )
 numberOfOk=$(($numberOfNodes - ($numberOfNactive + $numberOfNready)))
+echo "NODE HEALTH TEST:" >> $nstatusfile
 if [ $problemN -eq 1 ]; then
 	echo "Critical:" >> $nstatusfile
 	echo "Swarm nodes INACTIVE: $numberOfNactive/$numberOfNodes" >> $nstatusfile
@@ -136,7 +137,7 @@ statusfile=/tmp/serviceStatus.txt
 #numberOfSok=$( sed '/^\s*$/d' $tempfileok | wc -l | awk {'print $1'} )
 #numberOfSbad=$( sed '/^\s*$/d' $tempfilebad | wc -l | awk {'print $1'} )
 #numberOfS=$(($numberOfSbad + $numberOfSok))
-
+echo "SERVICE HEALTH TEST:" >$statusfile
 if [ $problemS -eq 1 ]; then
 	echo "Critical: The following services have critical replicas!"
 	cat $tempfilebad >> $statusfile
